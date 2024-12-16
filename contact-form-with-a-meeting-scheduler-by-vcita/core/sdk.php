@@ -25,25 +25,27 @@ class ls_sdk {
 	 * Load front facing stylesheet
 	 * @since 0.1.0
 	 */
-	function init_register_scripts(){
-
+	function init_register_scripts() {
 		$ls_helpers = $this->ls_helpers;
-
 		$path = $ls_helpers->get_dir( __FILE__ );
-
+		
 		$vcita_params = ls_get_vcita_params();
-		$livesite_widget_module = ls_get_module_data('livesite_widget');
-
-		$ls_helpers->register_scripts(array(
-			'livesite_sdk'	=> array(
-				'path'	 => $path . '../js/livesite-include-sdk.js',
+		
+		$uid = isset( $vcita_params['uid'] ) && is_string( $vcita_params['uid'] ) ? sanitize_text_field( $vcita_params['uid'] ) : '';
+		
+		$livesite_widget_module = ls_get_module_data( 'livesite_widget' );
+		
+		$show_livesite = isset( $livesite_widget_module['show_livesite'] ) && is_bool( $livesite_widget_module['show_livesite'] ) ? $livesite_widget_module['show_livesite'] : false;
+		
+		$ls_helpers->register_scripts( array(
+			'livesite_sdk' => array(
+				'path' => $path . '../js/livesite-include-sdk.js',
 				'params' => array(
-					'ls_sdk_uid' => $vcita_params['uid'],
-					'ls_sdk_show_livesite' => $livesite_widget_module['show_livesite']
+					'ls_sdk_uid' => $uid,
+					'ls_sdk_show_livesite' => $show_livesite,
 				)
 			)
 		));
-
 	}
 	/**
 	 * Load front facing stylesheet

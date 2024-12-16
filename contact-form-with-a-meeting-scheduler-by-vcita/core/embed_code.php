@@ -25,24 +25,23 @@ class livesite_embed_code {
 	 * Parse the HTTP response and return the data and if was successful or not.
 	 */
 	function parse_response($response) {
-	    $success = false;
-	    $raw_data = 'Unknown Error';
-
-	    if (is_wp_error($response)) {
-	        $raw_data = $response->get_error_message();
-
-	    } elseif (!empty($response['response'])) {
-	        if ($response['response']['code'] != 200) {
-	            $raw_data = $response['response']['message'];
-	        } else {
-	            $success = true;
-	            $raw_data = $response['body'];
-	        }
-	    }
-
-			$return = array( 'success' => $success, 'raw_data' => $raw_data );
-
-	    return $return;
+		$success = false;
+		$raw_data = 'Unknown Error';
+		
+		if (is_wp_error($response)) {
+			$raw_data = $response->get_error_message();
+		} elseif (!empty($response['response'])) {
+			if ($response['response']['code'] != 200) {
+				$raw_data = isset($response['response']['message']) ? $response['response']['message'] : 'Error without message';
+			} else {
+				$success = true;
+				$raw_data = isset($response['body']) ? $response['body'] : 'Empty response body';
+			}
+		}
+		
+		$return = array('success' => $success, 'raw_data' => $raw_data);
+		
+		return $return;
 	}
 
 
@@ -54,41 +53,38 @@ class livesite_embed_code {
 	 */
 	// create_embed_code( 'contact', $helpers->uid, '100%', '450px' )
 	function create_embed_code( $type, $uid, $width, $height ) {
-
-	    // Only present if UID is available
-	    if ( isset($uid) && !empty($uid) ) {
-
-			$transient_key = 'livesite_embed_code' . $type . $uid . $width . $height;
-
-			$code = get_transient( $transient_key );
-
+		// Only present if UID is available
+		if ( isset($uid) && !empty($uid) ) {
+			$transient_key = 'livesite_embed_code_' . $type . '_' . $uid . '_' . $width . '_' . $height;
+			
 			// Load embed code from the cache if possible
-			if ( ! $code ) {
-
-				$response = $this->get_contents(
-					"https://www.vcita.com/api/experts/" . urlencode($uid) . "/embed_code?type=" . $type . "&width=" . urlencode($width) . "&height=" . urlencode($height)
-				);
-
-				$data = json_decode($response['raw_data']);
-
-				if ($response['success']) {
-
-					$code = $data->code;
-
-					// Set the embed code to be cached for an hour
-					set_transient( $transient_key, $code, HOUR_IN_SECONDS);
-
-				} else {
-
-					$code = '<iframe frameborder="0" src="https://www.vcita.com/' . urlencode($uid) . '/' . $type . '/" width="'. $width .'" height="'. $height .'"></iframe>';
-
-				}
+			$code = get_transient( $transient_key );
+			if ( $code ) {
+				return $code; // Return cached code immediately
 			}
-	    }
-
-		return $code;
-
+			
+			// Fetch the embed code from the API
+			$response = $this->get_contents(
+				"https://www.vcita.com/api/experts/" . urlencode($uid) . "/embed_code?type=" . $type . "&width=" . urlencode($width) . "&height=" . urlencode($height)
+			);
+			
+			$data = json_decode($response['raw_data']);
+			if ($response['success']) {
+				$code = $data->code;
+				
+				// Set the embed code to be cached for an hour
+				set_transient( $transient_key, $code, HOUR_IN_SECONDS);
+			} else {
+				$code = '<iframe frameborder="0" src="https://www.vcita.com/' . urlencode($uid) . '/' . $type . '/" width="' . esc_attr($width) . '" height="' . esc_attr($height) . '"></iframe>';
+			}
+		} else {
+			// Handle case where UID is not available
+			$code = ''; // Return an empty string or any default value
+		}
+		
+		return $code; // Return the generated or cached embed code
 	}
+
 
 }
 

@@ -4,7 +4,7 @@ Donate link: https://www.vcita.com?invite=WP-contact
 Tags: contact, lead, form builder, custom form, contact form
 Requires at least: 4.6
 Tested up to: 6.3.1
-Stable tag: 4.10.3
+Stable tag: 4.10.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
  
@@ -120,6 +120,9 @@ Please visit <a href="https://www.vcita.com/about/privacy_policy?invite=WP">Priv
 
 
 == Changelog == 
+
+= vcita Contact Form Version 4.10.5 =
+ * security update
 
 = vcita Contact Form Version 4.10.2 =
  * security improvements

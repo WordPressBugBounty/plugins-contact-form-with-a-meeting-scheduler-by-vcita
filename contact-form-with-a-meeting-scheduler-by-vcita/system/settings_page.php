@@ -45,19 +45,23 @@ class livesite_settings_page
      * Adds a hidden page to allow reseting the plugin (mainly used for degbugging but not exclusive)
      * @since 0.1.0
      */
-    function add_settings_page(){
-        add_submenu_page(
-            'live-site',
-            __('Settings', 'livesite'),
-            __('Settings', 'livesite'),
-            'edit_posts',
-            $this->module_slug,
-            array($this, 'settings_page_html')
-        );
-
-		add_action( 'admin_enqueue_scripts', array($this,'enqueue_styles') );
-		add_action( 'admin_enqueue_scripts', array($this,'enqueue_scripts') );
-    }
+	function add_settings_page() {
+		// Check if the user has the required capability to manage posts
+		if (current_user_can('edit_posts')) {
+			add_submenu_page(
+				'live-site',                       // Parent slug
+				__('Settings', 'livesite'),       // Page title
+				__('Settings', 'livesite'),       // Menu title
+				'edit_posts',                     // Capability
+				$this->module_slug,               // Menu slug
+				array($this, 'settings_page_html') // Callback function
+			);
+			
+			// Enqueue styles and scripts only for the settings page
+			add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
+			add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+		}
+	}
 
 	/**
 	 * Load Styles

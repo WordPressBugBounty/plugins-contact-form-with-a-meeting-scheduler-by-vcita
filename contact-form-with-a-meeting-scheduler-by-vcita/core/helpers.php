@@ -9,7 +9,8 @@ class ls_helpers {
 	 * Returns the current operatings system
 	 * @since 0.1.0
 	 */
-	function get_os( $file = __FILE__ ){
+	function get_os() {
+		// Check if the OS is Windows or Cygwin
 		return ((strpos(strtolower(PHP_OS), 'win') === 0) || (strpos(strtolower(PHP_OS), 'cygwin') !== false)) ? 'win32' : 'unix';
 	}
 
@@ -126,37 +127,35 @@ class ls_helpers {
 	 * @return: Int
 	 * @since 0.1.0
 	 */
-	function add_wp_page( $title, $page_content, $unsafe_html = false ){
-
-		if ( $title != '' && $page_content != '' ){
-
+	function add_wp_page(string $title, string $page_content, bool $unsafe_html = false) {
+		if ($title !== '' && $page_content !== '') {
 			$user_ID = get_current_user_id();
-
-			// if ( $unsafe_html )
-			// 	$content = wp_strip_all_tags( $page_content );
-			// else
-				$content = $page_content;
-
+			
+			// Strip tags if unsafe HTML is not allowed
+			$content = $unsafe_html ? $page_content : wp_strip_all_tags($page_content);
+			
 			$new_post_settings = array(
-				'post_title' => wp_strip_all_tags( $title ),
+				'post_title'   => wp_strip_all_tags($title),
 				'post_content' => $content,
-				'post_status' => 'publish',
-				'post_date' => date('Y-m-d H:i:s'),
-				'post_author' => $user_ID,
-				'post_type' => 'page',
-				'post_category' => array(0)
+				'post_status'  => 'publish',
+				'post_date'    => current_time('mysql'), // Use WordPress's time function
+				'post_author'  => $user_ID,
+				'post_type'    => 'page',
+				'post_category' => array(0) // This parameter is deprecated, consider using tags instead
 			);
-
-			$post_id = false;
-
-			$post_id = wp_insert_post( $new_post_settings );
-
+			
+			$post_id = wp_insert_post($new_post_settings);
+			
+			// Check for errors
+			if (is_wp_error($post_id)) {
+				// Handle error (you can log it, or return a specific error code/message)
+				return false;
+			}
+			
 			return $post_id;
-
 		}
-
-		return false;
-
+		
+		return false; // Return false if title or content is empty
 	}
 
 	/**
@@ -225,25 +224,27 @@ class ls_helpers {
 	 * @return: String
 	 * @since 0.1.0
 	 */
-	function get_custom_page_url ( $module_name = false ){
-
+	function get_custom_page_url(string $module_name = '') {
+		// Initialize custom page URL as false
 		$custom_page_url = false;
-
-		if ( $module_name ){
-
-			$module_data = ls_get_module_data( $module_name );
-
-			// Get custom page id
-			$custom_page_id = $module_data['custom_page_id'];
-
-			// Setup edit url if custom page id exists
-			if ( $custom_page_id )
-				$custom_page_url = get_admin_url('', '', 'admin') . 'post.php?action=edit&post=' . $custom_page_id;
-
+		
+		// Proceed only if a module name is provided
+		if ($module_name) {
+			// Retrieve module data
+			$module_data = ls_get_module_data($module_name);
+			
+			// Check if module data is valid and contains custom page ID
+			if (!empty($module_data) && isset($module_data['custom_page_id'])) {
+				$custom_page_id = $module_data['custom_page_id'];
+				
+				// Set up the edit URL if custom page ID exists
+				if ($custom_page_id) {
+					$custom_page_url = get_admin_url(null, 'post.php?action=edit&post=' . $custom_page_id);
+				}
+			}
 		}
-
-		return $custom_page_url;
-
+		
+		return $custom_page_url; // Return the constructed URL or false
 	}
 
 	/**
@@ -254,12 +255,16 @@ class ls_helpers {
 	 * @return: String
 	 * @since 0.1.0
 	 */
-	function get_plugin_page_url ( $page_name = '' ){
-
-		$custom_page_url = $page_name != '' ? get_admin_url() . 'admin.php?page=' . $page_name : false;
-
-		return $custom_page_url;
-
+	function get_plugin_page_url(string $page_name = '') {
+		// Initialize the custom page URL as false
+		$custom_page_url = false;
+		
+		// Proceed only if a valid page name is provided
+		if (!empty($page_name)) {
+			$custom_page_url = get_admin_url() . 'admin.php?page=' . urlencode($page_name);
+		}
+		
+		return $custom_page_url; // Return the constructed URL or false
 	}
 
 	/**
@@ -309,45 +314,40 @@ class ls_helpers {
 	 * @return: String
 	 * @since 0.1.0
 	 */
-	function generate_custom_page_once ( $module_name = false ){
-
-		if ( $module_name ){
-
-			$module_data = ls_get_module_data( $module_name );
-
-			// Get custom page id returns false if does not exist
-			$custom_page_id = $module_data['custom_page_id'];
-			$custom_page_previously_created = $module_data['custom_page_previously_created'];
-
-			// If custom page id does not exist and was not previously created
-			if ( ! $custom_page_id && ! $custom_page_previously_created ){
-
-				// Get random content method knows how to handle single string and array
-  			$custom_page_content = $this->get_random_page_content( $module_data['custom_page_content'] );
-
-				// Add the modules custom page
-        $page_id = $this->add_wp_page( $module_data['custom_page_title'], $custom_page_content );
-
-				// Only if page was added define the new page id in the plugins settings
-        if ( $page_id ){
-
-					ls_set_settings( array(
-          	'modules' => array(
-						  $module_name => array(
-                'custom_page_id' => $page_id,
-					   		'custom_page_previously_created' => true
-              )
-            )
-          ));
-
-				}
-
-			}
-
-			return $custom_page_previously_created;
-
+	function generate_custom_page_once($module_name = false) {
+		// Proceed only if a valid module name is provided
+		if (!$module_name) {
+			return false; // Early return if no module name is given
 		}
-
+		
+		$module_data = ls_get_module_data($module_name);
+		
+		// Get custom page ID and check if it was previously created
+		$custom_page_id = $module_data['custom_page_id'];
+		$custom_page_previously_created = $module_data['custom_page_previously_created'];
+		
+		// If the custom page does not exist and was not previously created
+		if (!$custom_page_id && !$custom_page_previously_created) {
+			// Get random content for the custom page
+			$custom_page_content = $this->get_random_page_content($module_data['custom_page_content']);
+			
+			// Add the module's custom page
+			$page_id = $this->add_wp_page($module_data['custom_page_title'], $custom_page_content);
+			
+			// If the page was successfully added, update the plugin's settings
+			if ($page_id) {
+				ls_set_settings(array(
+					'modules' => array(
+						$module_name => array(
+							'custom_page_id' => $page_id,
+							'custom_page_previously_created' => true
+						)
+					)
+				));
+			}
+		}
+		
+		return $custom_page_previously_created; // Return the previous creation status
 	}
 
 	/**
@@ -475,29 +475,32 @@ class ls_helpers {
    * @param: $params{Array}
    * @since 0.1.0
    */
-   function parse_old_plugin_params( $params ){
-
-       ls_set_settings( array(
-           'vcita_connected' => true,
-           'vcita_params' => array(
-               'success'              => 1,
-               'uid'                  => $params['uid'],
-               'first_name'           => $params['first_name'],
-               'last_name'            => $params['last_name'],
-               'title'                => $params['title'],
-               'confirmation_token'   => $params['confirmation_token'],
-               'confirmed'            => $params['confirmed'],
-               'engage_delay'         => 5,
-               'implementation_key'   => $params['implementation_key'],
-               'email'                => $params['email'],
-                                         // convert to boolean
-               'engage_active'        => filter_var( $params['engage_active'], FILTER_VALIDATE_BOOLEAN)
-           )
-       ));
-
-       delete_option( $this->get_old_plugin_db_key() );
-
-   }
+	function parse_old_plugin_params( $params ) {
+		// Проверяем, что $params является массивом и содержит необходимые ключи
+		if ( is_array( $params ) && isset($params['uid'], $params['first_name'], $params['last_name'], $params['title'], $params['confirmation_token'], $params['confirmed'], $params['implementation_key'], $params['email'], $params['engage_active']) ) {
+			
+			// Обрабатываем и проверяем параметры перед сохранением
+			ls_set_settings( array(
+				'vcita_connected' => true,
+				'vcita_params' => array(
+					'success'              => 1,
+					'uid'                  => sanitize_text_field($params['uid']),
+					'first_name'           => sanitize_text_field($params['first_name']),
+					'last_name'            => sanitize_text_field($params['last_name']),
+					'title'                => sanitize_text_field($params['title']),
+					'confirmation_token'   => sanitize_text_field($params['confirmation_token']),
+					'confirmed'            => filter_var($params['confirmed'], FILTER_VALIDATE_BOOLEAN),
+					'engage_delay'         => 5,
+					'implementation_key'   => sanitize_text_field($params['implementation_key']),
+					'email'                => sanitize_email($params['email']),
+					'engage_active'        => filter_var($params['engage_active'], FILTER_VALIDATE_BOOLEAN)
+				)
+			));
+			
+			// Удаляем старую опцию, если она существует
+			delete_option( $this->get_old_plugin_db_key() );
+		}
+	}
 
 	/**
 	 * Settings
@@ -506,22 +509,16 @@ class ls_helpers {
 	 * @since 3.0.2
 	 */
 	function get_random_page_content( $page_content_list ) {
-
-		// Initially the list is just one string
-		$random_sentence = $page_content_list;
-
-		// If the list is an array
-		if ( is_array( $page_content_list ) ){
-
-			// Get a random number up to the length of the custom sentences
-			$random_sentence_number = mt_rand( 0, count($page_content_list) - 1 );
-
-			$random_sentence = $page_content_list[ $random_sentence_number ];
-
+		if ( is_array( $page_content_list ) ) {
+			if ( count( $page_content_list ) > 0 ) {
+				$random_sentence_number = mt_rand( 0, count( $page_content_list ) - 1 );
+				return sanitize_text_field( $page_content_list[ $random_sentence_number ] );
+			}
+		} elseif ( is_string( $page_content_list ) ) {
+			return sanitize_text_field( $page_content_list );
 		}
-
-		return $random_sentence;
-
+		
+		return '';
 	}
 
 }

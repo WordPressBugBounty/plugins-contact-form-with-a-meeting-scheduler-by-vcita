@@ -37,36 +37,41 @@ class reset_plugin
      * Adds a hidden page to allow reseting the plugin (mainly used for degbugging but not exclusive)
      * @since 0.1.0
      */
-    function add_reset_plugin_page(){
-        add_submenu_page(
-            null,
-            __('', 'livesite'),
-            __('', 'livesite'),
-            'edit_posts',
-            'live-site-reset-plugin',
-            array($this, 'reset_plugin')
-        );
-    }
+	function add_reset_plugin_page() {
+		// Check if the user has the required capability to manage posts
+		if (current_user_can('edit_posts')) {
+			add_submenu_page(
+				null,
+				__('Reset Plugin', 'livesite'), // Page title
+				__('Reset Plugin', 'livesite'), // Menu title
+				'edit_posts',                    // Capability
+				'live-site-reset-plugin',        // Menu slug
+				array($this, 'reset_plugin')     // Callback function
+			);
+		}
+	}
 
 	/**
      * Remove custom plugin pages from wordpress
      * @since 0.1.0
      */
-	function remove_custom_pages(){
-
+	function remove_custom_pages() {
+		// Get the modules
 		$modules = ls_get_modules();
-
+		
 		// Run over all modules and start them up
-		foreach ( $modules as $module ){
-
-			$page_id = $module['custom_page_id'];
-
-			// If custom page has been created delete page permanantely and skip the trash
-			if ( $page_id )
-	        	wp_delete_post( $page_id, true );
-
+		foreach ($modules as $module) {
+			// Check if the custom page ID exists
+			if (isset($module['custom_page_id']) && !empty($module['custom_page_id'])) {
+				$page_id = intval($module['custom_page_id']); // Ensure the ID is an integer
+				
+				// Check if the post exists before trying to delete
+				if (get_post_status($page_id) !== false) {
+					// If the custom page has been created, delete it permanently (skip the trash)
+					wp_delete_post($page_id, true);
+				}
+			}
 		}
-
 	}
 
     /**

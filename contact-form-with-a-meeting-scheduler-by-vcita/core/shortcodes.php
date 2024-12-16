@@ -48,78 +48,67 @@ class ls_shortcodes {
 	 * @since 0.1.0
 	 */
 	function livesite_pay_shortcode( $atts ) {
-
 		// Attributes
 		$atts = shortcode_atts(array(
-			'label' 			=> 'PAY NOW',
-			'show_icons' 	=> 'false',
-			'payment_amount' 	=> '',
-			'title'			 	=> '',
-			'class' 			=> ''
+			'label'          => 'PAY NOW',
+			'show_icons'     => 'false',
+			'payment_amount' => '',
+			'title'          => '',
+			'class'          => ''
 		), $atts, 'livesite');
-
-		$payment_icons = $atts['show_icons'] ? '<div class="ls-payment-button-icons"></div>' : '';
-
-		// Add button options
+		
+		$show_icons = filter_var($atts['show_icons'], FILTER_VALIDATE_BOOLEAN);
+		$payment_icons = $show_icons ? '<div class="ls-payment-button-icons"></div>' : '';
+		
 		$options = 'data-options="';
-
-		// Add custom amount
-		if ( $atts['payment_amount'] != '' )
-			$options .= 'amount:' . wp_strip_all_tags( $atts['payment_amount'] ) . ';';
-
-		// Add custom title
-		if ( $atts['title'] != '' )
-			$options .= 'title:' . wp_strip_all_tags( $atts['title'] ) . ';';
-
-		// Close attribute
+		
+		if ( !empty($atts['payment_amount']) ) {
+			$options .= 'amount:' . esc_attr($atts['payment_amount']) . ';';
+		}
+		
+		if ( !empty($atts['title']) ) {
+			$options .= 'title:' . esc_attr($atts['title']) . ';';
+		}
+		
 		$options .= '"';
-
-		// Generate html
+		
 		$html = '<div class="ls-payment-button-wrapper">
-				<div class="ls-payment-button livesite-pay '. wp_strip_all_tags( $atts['class'] ) .'" '. $options .'>'. wp_strip_all_tags( $atts['label'] ) .'</div>
-				'. $payment_icons .'
-			</div>';
-
+                <div class="ls-payment-button livesite-pay ' . esc_attr($atts['class']) . '" ' . $options . '>' . esc_html($atts['label']) . '</div>
+                ' . $payment_icons . '
+            </div>';
+		
 		return $html;
-
 	}
-
+	
+	
 	/**
 	 * Add livesite contact form shortcode
 	 * @since 0.1.0
 	 */
 	function livesite_contact_shortcode( $atts ) {
-
 		$ls_embed = $this->ls_embed;
-
+		
 		// Attributes
 		$atts = shortcode_atts(array(
-			'title' 	=> 'Contact request',
-			'class'		=> '',
-			'type'		=> 'contact',
-			'width' 	=> '100%',
-			'height' 	=> '450px',
+			'title'   => 'Contact request',
+			'class'   => '',
+			'type'    => 'contact',
+			'width'   => '100%',
+			'height'  => '450px',
 		), $atts, 'livesite');
-
-		// Set contact form title
-		$title = 'title=' . wp_strip_all_tags( $atts['title'] );
-
-		// Check if user has a custom class
-		if ( $atts['class'] != '' )
-			$class = 'class="'. wp_strip_all_tags( $atts['class'] ) .'"';
-		else
-			$class = '';
-
-		// Get UID
+		
+		$title = 'title=' . esc_attr($atts['title']);
+		
+		$class = !empty($atts['class']) ? 'class="' . esc_attr($atts['class']) . '"' : '';
+		
+		// Получаем UID
 		$settings = ls_get_settings();
-		$uid = $settings['vcita_params']['uid'];
-
-		// Generate html
-		// $html = '<iframe frameborder="0" '. $class .' src="//www.vcita.com/widgets/contact_form/' . urlencode($uid) . '?ver=2" width="100%" height="470"></iframe>';
-		$html = $ls_embed->create_embed_code( $atts['type'], $uid, $atts['width'], $atts['height'] );
-
+		$uid = isset($settings['vcita_params']['uid']) ? $settings['vcita_params']['uid'] : '';
+		
+		// Генерируем HTML
+		$html = $ls_embed->create_embed_code($atts['type'], $uid, esc_attr($atts['width']), esc_attr($atts['height']));
+		
 		return $html;
-
 	}
 
 	/**
@@ -127,32 +116,26 @@ class ls_shortcodes {
 	 * @since 0.1.0
 	 */
 	function livesite_scheduler_shortcode( $atts ) {
-
 		// Attributes
 		$atts = shortcode_atts(array(
-			'title' 	=> 'Contact request',
-			'class'		=> ''
+			'title' => 'Contact request',
+			'class' => ''
 		), $atts, 'livesite');
-
-		// Set contact form title
-		$title = 'title=' . wp_strip_all_tags( $atts['title'] );
-
-		// Check if user has a custom class
-		if ( $atts['class'] != '' )
-			$class = 'class="'. wp_strip_all_tags( $atts['class'] ) .'"';
-		else
-			$class = '';
-
-		// Get UID
+		
+		$title = 'title=' . esc_attr($atts['title']);
+		
+		$class = !empty($atts['class']) ? 'class="' . esc_attr($atts['class']) . '"' : '';
+		
+		// UID
 		$settings = ls_get_settings();
-		$uid = $settings['vcita_params']['uid'];
-
-		// Generate html
-		$html = '<iframe frameborder="0" '. $class .' src="//www.vcita.com/widgets/scheduler/' . urlencode($uid) . '?ver=2" width="100%" height="470"></iframe>';
-
+		$uid = isset($settings['vcita_params']['uid']) ? $settings['vcita_params']['uid'] : '';
+		
+		// HTML
+		$html = '<iframe frameborder="0" ' . $class . ' src="//www.vcita.com/widgets/scheduler/' . esc_url($uid) . '?ver=2" width="100%" height="470"></iframe>';
+		
 		return $html;
-
 	}
+
 
 }
 

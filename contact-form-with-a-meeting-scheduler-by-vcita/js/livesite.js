@@ -2,15 +2,18 @@ jQuery( function($) {
 
 	// Generate url for vcita connect or relogin
 	var get_vcita_connect_url = function ( reconnect ) {
-
+		// Получаем nonce из глобальной переменной
+		var nonce = ls_PHPVAR_livesite.ls_module_nonce;
+		
 		var callbackURL = ls_PHPVAR_livesite.ls_admin_url + 'admin.php?page=live-site-parse-vcita-callback',
-				vcita_connect_url = [
-					"//www.vcita.com/integrations/wordpress/new",
-					"?callback=" + encodeURIComponent(callbackURL),
-					"&invite=WP",
-					"&lang=" + ls_PHPVAR_livesite.ls_locale
-				];
-
+			vcita_connect_url = [
+				"//www.vcita.com/integrations/wordpress/new",
+				"?callback=" + encodeURIComponent(callbackURL),
+				"&_wpnonce=" + nonce,
+				"&invite=WP",
+				"&lang=" + ls_PHPVAR_livesite.ls_locale,
+			];
+		
 		// add reconnect option to url if required
 		if ( reconnect === true ){
 			vcita_connect_url.push( '&login=true' );
@@ -18,11 +21,10 @@ jQuery( function($) {
 			var connect_email = $('#connect-email').val();
 			vcita_connect_url.push( "&email=" + connect_email );
 		}
-
+		
 		return vcita_connect_url.join('');
-
 	};
-
+	
 	// Go to connect url
 	var vcita_connect = function ( e ) {
 

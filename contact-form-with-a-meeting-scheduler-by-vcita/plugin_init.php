@@ -37,170 +37,160 @@ class ls_plugin_init {
 	 * Create Settings Page
 	 * @since 0.1.0
 	 */
-	function ls_settings_setup(){
-
+	function ls_settings_setup() {
 		$ls_helpers = $this->ls_helpers;
-
-		// Setup small link on wordpress plugins page that directs user to settings page
-		add_filter( 'plugin_action_links', array($this,'plugin_action_links'), 10, 2 );
-
+		
+		// Setup small link on WordPress plugins page that directs user to settings page
+		add_filter('plugin_action_links', array($this, 'plugin_action_links'), 10, 2);
+		
 		/* Add settings menu page */
 		$settings_page = add_menu_page(
-			'LiveSite Pack', 		/* Page Title */
-			'LiveSite',             /* Menu Title */
-			'manage_options',       /* Capability */
-			'live-site',            /* Page Slug */
-			array($this,'ls_settings_page'), 	/* Settings Page Function Callback */
-			plugin_dir_url( __FILE__ ) . 'images/vcita-icon.png',	/* Menu icon */
+			'LiveSite Pack',             /* Page Title */
+			'LiveSite',                  /* Menu Title */
+			'manage_options',            /* Capability */
+			'live-site',                 /* Page Slug */
+			array($this, 'ls_settings_page'), /* Settings Page Function Callback */
+			plugin_dir_url(__FILE__) . 'images/vcita-icon.png', /* Menu icon */
 			'2.3489'
 		);
-
+		
 		$os = $ls_helpers->get_os();
-
-		// For popular os (unix)
-		if ( $os != 'win32' )
-			define('LS_SLASH','/');
-		// For win32 os
-		else
-			define('LS_SLASH','\\');
-
+		
+		// Define directory separator based on OS
+		if ($os !== 'win32') {
+			define('LS_SLASH', '/');
+		} else {
+			define('LS_SLASH', '\\');
+		}
+		
 		// If settings don't exist in db set them up from defaults
-		if ( ! ls_get_settings() )
+		if (!ls_get_settings()) {
 			ls_init_default_settings();
-
+		}
+		
 		// Check if vcita is not connected
 		// If old connection details are in place use them
-		if ( ! ls_is_vcita_connected() ){
-
+		if (!ls_is_vcita_connected()) {
 			$old_plugin_db_key = $ls_helpers->get_old_plugin_db_key();
-
+			
 			// Get old plugin connection details
-			$old_connection_options = get_option( $old_plugin_db_key );
-
+			$old_connection_options = get_option($old_plugin_db_key);
+			
 			// Setup connection details
-			if ( $old_connection_options ){
-
-				$ls_helpers->parse_old_plugin_params( $old_connection_options );
-
-				// Flag plugin as upgraded plugin so we know not to auto install module pages
-				ls_set_settings( array(
+			if ($old_connection_options) {
+				$ls_helpers->parse_old_plugin_params($old_connection_options);
+				
+				// Flag plugin as upgraded plugin so we know not to auto-install module pages
+				ls_set_settings(array(
 					'plugin_upgraded' => true
 				));
-
+				
 				$vcita_params = ls_get_vcita_params();
-
+				
 				// Set value of active engage widget to the same value as the old plugin
-				if ( isset( $vcita_params['engage_active'] ) ) {
-
-					ls_set_module_data( 'livesite_widget', array('show_livesite' => $vcita_params['engage_active']) );
-
+				if (isset($vcita_params['engage_active'])) {
+					ls_set_module_data('livesite_widget', array('show_livesite' => $vcita_params['engage_active']));
 				}
-
-				$redirect_url = $ls_helpers->get_plugin_path();
-
-				wp_redirect( $redirect_url );
-
+				
+				$redirect_url = esc_url($ls_helpers->get_plugin_path()); // Escape the redirect URL
+				wp_redirect($redirect_url);
 				exit;
-
 			}
 		}
-
-
+		
 		// Only show modules and settings if we're connected to vcita
-		if ( ls_is_vcita_connected() ){
-
+		if (ls_is_vcita_connected()) {
 			require_once('system/settings_page.php');
 			require_once('system/backoffice_page.php');
-
+			
 			$this->init_modules();
-
+			
 			$main_module = ls_get_main_module();
 			$settings = ls_get_settings();
-
-			// For a one time redirect after vcita connect
-			if ( ! $settings['plugin_initially_activated'] ){
-
-				// Set plugin as already activated, this only allows it to happen once when we connect to vcita
+			
+			// For a one-time redirect after vcita connect
+			if (!$settings['plugin_initially_activated']) {
+				// Set plugin as already activated
 				ls_set_settings(array(
 					'plugin_initially_activated' => true
 				));
-
-				// Get main module data
-				$module_data = ls_get_module_data( $main_module );
-
-				// Redirect to main module page
-				$plugin_page_url = $ls_helpers->get_plugin_page_url( $module_data['slug'] );
-
-				wp_redirect( $plugin_page_url );
-				exit;
 				
+				// Get main module data
+				$module_data = ls_get_module_data($main_module);
+				
+				// Redirect to main module page
+				$plugin_page_url = esc_url($ls_helpers->get_plugin_page_url($module_data['slug'])); // Escape URL
+				wp_redirect($plugin_page_url);
+				exit;
 			}
-
 		}
-
+		
 		/* Vars */
 		$page_hook_id = $this->setings_page_id();
-
+		
 		/* Do stuff in settings page, such as adding scripts, etc. */
-		if ( !empty( $settings_page ) ) {
-
+		if (!empty($settings_page)) {
 			/* Load the JavaScript needed for the settings screen. */
-			add_action( 'admin_enqueue_scripts', array($this,'enqueue_scripts') );
-			add_action( 'admin_enqueue_scripts', array($this,'enqueue_styles') );
-
+			add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+			add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
 		}
 	}
+
 
 	/**
 	 * Setup small settings link on wordpress plugins page
 	 * @since 0.1.0
 	 */
 	function plugin_action_links( $links, $file ) {
-
 		$ls_helpers = $this->ls_helpers;
-
-		// This function runs for every plugin entry in the plugins page
-		// So, we have to check that we're only adding the link to our plugin
-		if ( $file != plugin_basename( plugin_dir_path( __FILE__ ) ) . '/Livesite.php' )
-			return $links;
-
-		$redirect_url = $ls_helpers->get_plugin_path();
-
-		$settings_link = '<a href="' . $redirect_url . '">'
-			. esc_html( __( 'Settings', 'livesite' ) ) . '</a>';
-
+		
+		// Check if the current plugin matches our plugin
+		if ( $file !== plugin_basename( plugin_dir_path( __FILE__ ) ) . '/Livesite.php' ) {
+			return $links; // Return the original links if not matching
+		}
+		
+		// Get the redirect URL safely
+		$redirect_url = esc_url( $ls_helpers->get_plugin_path() );
+		
+		// Create the settings link with escaped text
+		$settings_link = '<a href="' . $redirect_url . '">' . esc_html__( 'Settings', 'livesite' ) . '</a>';
+		
+		// Prepend the settings link to the existing links
 		array_unshift( $links, $settings_link );
-
-		return $links;
+		
+		return $links; // Return the modified links
 	}
 
 	/**
 	 * Redirect user to main plugin page after update
 	 * @since 0.1.0
 	 */
-	function redirect_after_upgrade( $upgrader_object, $options ){
-
-	    if (is_admin()) {
-            $contactform_plugin = plugin_basename( __FILE__ );
-
-            if($options['action'] == 'update' && $options['type'] == 'plugin' && isset($options['plugins'])) {
-                foreach($options['plugins'] as $plugin) {
-                    if($plugin == $contactform_plugin) {
-
-                        $ls_helpers = $this->ls_helpers;
-
-                        $redirect_url = $ls_helpers->get_plugin_path();
-
-                        wp_redirect( $redirect_url );
-
-                    }
-                }
-            }
-        }
-
-        exit;
-
-    }
+	function redirect_after_upgrade( $upgrader_object, $options ) {
+		// Ensure this runs only in admin area
+		if ( is_admin() ) {
+			$contactform_plugin = plugin_basename( __FILE__ );
+			
+			// Check if the action is an update for a plugin
+			if ( isset($options['action']) && $options['action'] == 'update'
+				&& isset($options['type']) && $options['type'] == 'plugin'
+				&& isset($options['plugins']) && is_array($options['plugins'])) {
+				
+				foreach ( $options['plugins'] as $plugin ) {
+					// Validate the plugin basename
+					if ( $plugin === $contactform_plugin ) {
+						$ls_helpers = $this->ls_helpers;
+						
+						// Get the redirect URL safely
+						$redirect_url = esc_url($ls_helpers->get_plugin_path());
+						
+						// Redirect to the plugin path
+						wp_redirect( $redirect_url );
+						exit; // Ensure no further code runs after redirect
+					}
+				}
+			}
+		}
+	}
 
 	/**
 	 * Utility: Page Hook
@@ -215,64 +205,71 @@ class ls_plugin_init {
 	 * Load Scripts
 	 * @since 0.1.0
 	 */
-	function enqueue_scripts( $hook_suffix ){
-
+	function enqueue_scripts($hook_suffix) {
 		$ls_helpers = $this->ls_helpers;
-
-		$path = $ls_helpers->get_dir( __FILE__ );
-
+		
+		// Get the plugin directory path
+		$path = $ls_helpers->get_dir(__FILE__);
+		
+		// Register scripts with proper escaping
 		$ls_helpers->register_scripts(array(
 			'livesite' => array(
-				'path'		=> $path . "js/livesite.js",
-				'deps'		=> array('jquery'),
+				'path' => esc_url($path . 'js/livesite.js'), // Escape URL for safety
+				'deps' => array('jquery'),
 				'params' => array(
-					'ls_admin_url'  	=> get_admin_url(),
-					'ls_locale'				=> get_locale(),
-					'ls_module_nonce' => wp_create_nonce( 'activate-module' ),
-					'ls_site_url'	 		=> get_site_url()
+					'ls_admin_url' => esc_url(get_admin_url()), // Escape URL for safety
+					'ls_locale' => get_locale(),
+					'ls_module_nonce' => wp_create_nonce( 'activate-module' ), // Nonce for security
+					'ls_site_url' => esc_url(get_site_url()) // Escape URL for safety
 				)
 			),
-			'custom_page'	=> array(
-				'path' => $path . 'js/custom-page.js'
+			'custom_page' => array(
+				'path' => esc_url($path . 'js/custom-page.js') // Escape URL for safety
 			)
 		));
-
+		
+		// Get the settings page ID
 		$page_hook_id = $this->setings_page_id();
-
-		if ( $hook_suffix == $page_hook_id ){
-			wp_enqueue_script( 'common' );
-			wp_enqueue_script( 'wp-lists' );
-			wp_enqueue_script( 'livesite' );
+		
+		// Enqueue scripts if the current hook suffix matches the settings page ID
+		if ($hook_suffix === $page_hook_id) {
+			wp_enqueue_script('common');
+			wp_enqueue_script('wp-lists');
+			wp_enqueue_script('livesite');
 		}
 	}
+
 
 	/**
 	 * Load Styles
 	 * @since 0.1.0
 	 */
-	function enqueue_styles( $hook_suffix ){
-
+	function enqueue_styles($hook_suffix) {
 		$ls_helpers = $this->ls_helpers;
-
-		$path = $ls_helpers->get_dir( __FILE__ );
+		
+		// Get the plugin directory path and version
+		$path = $ls_helpers->get_dir(__FILE__);
 		$version = $ls_helpers->get_plugin_version();
-
-		// register acf styles
+		
+		// Register ACF styles
 		$styles = array(
-			'livesite'	=> $path . 'css/livesite.css',
-			'livesite_icon_font'	=> $path . 'css/icon-font.css',
-			'toggle_switch'	=> $path . 'css/toggles-full.css',
+			'livesite' => esc_url($path . 'css/livesite.css'), // Escape URL for safety
+			'livesite_icon_font' => esc_url($path . 'css/icon-font.css'), // Escape URL for safety
+			'toggle_switch' => esc_url($path . 'css/toggles-full.css'), // Escape URL for safety
 		);
-
-		foreach( $styles as $k => $v ){
-			wp_register_style( $k, $v, false, $version );
+		
+		// Register each style
+		foreach ($styles as $k => $v) {
+			wp_register_style($k, $v, array(), $version); // Ensure dependencies are handled (set to array())
 		}
-
+		
+		// Get the settings page ID
 		$page_hook_id = $this->setings_page_id();
-
-		if ( $hook_suffix == $page_hook_id ){
-			wp_enqueue_style( 'livesite' );
-			wp_enqueue_style( 'livesite_icon_font' );
+		
+		// Enqueue styles if the current hook suffix matches the settings page ID
+		if ($hook_suffix === $page_hook_id) {
+			wp_enqueue_style('livesite');
+			wp_enqueue_style('livesite_icon_font');
 		}
 	}
 
@@ -284,32 +281,35 @@ class ls_plugin_init {
 	function ls_settings_page(){
 
 		/* global vars */
-		global $hook_suffix;
+		global $hook_suffix; // Access the global hook suffix
+		
+		$ls_helpers = $this->ls_helpers; // Access helper methods
+		$modules = ls_get_modules(); // Get the list of modules
 
-		$ls_helpers = $this->ls_helpers;
+        // When plugin is not connected to vcita get admin email to populate email signup field
+		$admin_email = sanitize_email(get_option('admin_email', '')); // Sanitize admin email to prevent potential issues
 
-		$modules = ls_get_modules();
-
-		// When plugin is not connected to vcita get admin email to populate email signup field
-		$admin_email = get_option('admin_email','');
-
-		// Check if user has connected his account to vcita
-		$is_vcita_connected = ls_is_vcita_connected();
-
-		$plugin_page_url = $ls_helpers->get_plugin_page_url('live-site-backoffice');
-
-		$main_module = ls_get_main_module();
+        // Check if user has connected their account to vCita
+		$is_vcita_connected = ls_is_vcita_connected(); // Presume this function is secure
+		
+		$plugin_page_url = esc_url($ls_helpers->get_plugin_page_url('live-site-backoffice')); // Escape URL for safety
+		
+		$main_module = ls_get_main_module(); // Get the main module
 		$main_title = '';
 
-		// Partner url
-		$partner_url = 'https://www.vcita.com/partners?' . $ls_helpers->get_plugin_identifier();
-
+        // Partner URL
+		$partner_url = esc_url('https://www.vcita.com/partners?' . $ls_helpers->get_plugin_identifier()); // Escape URL for safety
+		
+		
 		if ( $main_module ){
-
-			$module_data = ls_get_module_data( $main_module );
-
-			$module_main_title = $module_data['main_title'];
-			$module_text = $module_data['text'];
+			
+			$module_data = ls_get_module_data($main_module); // Get module data
+			
+			// Check if module data is set and not empty
+			if (isset($module_data['main_title'], $module_data['text'])) {
+				$module_main_title = sanitize_text_field($module_data['main_title']); // Sanitize module title
+				$module_text = wp_kses_post($module_data['text']); // Sanitize module text for safe HTML output
+			}
 
 		}
 
@@ -429,26 +429,27 @@ class ls_plugin_init {
 	 * Initiates modules based on their active definition in the $ls_settings
 	 * @since 0.1.0
 	 */
-	function init_modules(){
-
-		$ls_helpers = $this->ls_helpers;
-
-		$modules = ls_get_modules();
-		$dir = $ls_helpers->get_path();
-
-		// Run over all modules and start them up
-		foreach ( $modules as $module_name => $module ){
-
-			if ( $module['active'] ){
-
-				$base_dir = str_replace( '/core', '', $dir );
-				$base_dir = str_replace( '\core', '', $base_dir );
-				$base_dir = str_replace( '/', LS_SLASH, $base_dir );
-
-				require_once( $base_dir . $module['path'] );
-
+	function init_modules() {
+		$ls_helpers = $this->ls_helpers; // Access the helper methods
+		$modules = ls_get_modules(); // Retrieve the list of modules
+		$dir = $ls_helpers->get_path(); // Get the base directory path
+		
+		// Iterate through all modules and initialize the active ones
+		foreach ($modules as $module_name => $module) {
+			if ($module['active']) {
+				// Clean up the directory path
+				$base_dir = str_replace('/core', '', $dir); // Remove '/core' from the path
+				$base_dir = str_replace('\\core', '', $base_dir); // Remove '\core' (Windows compatibility)
+				$base_dir = str_replace('/', LS_SLASH, $base_dir); // Normalize the directory separator
+				
+				// Attempt to require the module file, handle potential errors
+				$module_path = $base_dir . $module['path'];
+				if (file_exists($module_path)) {
+					require_once($module_path); // Include the module file
+				} else {
+					error_log("Module file not found: " . $module_path); // Log an error if the file does not exist
+				}
 			}
-
 		}
 	}
 }
